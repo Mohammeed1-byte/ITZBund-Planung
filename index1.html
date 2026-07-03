@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITZBund · Analytics-Cockpit — Demo</title>
+<style>
+  :root{
+    --ink:#12233B;
+    --ink-2:#3A4E68;
+    --muted:#6E8298;
+    --canvas:#EEF2F7;
+    --surface:#FFFFFF;
+    --line:#DCE4EE;
+    --navy:#1B3A63;
+    --navy-deep:#132C4B;
+    --teal:#127E93;
+    --teal-soft:#E1F0F2;
+    --slate:#5E7C9C;
+    --amber:#C0782B;
+    --amber-soft:#F7ECDD;
+    --green:#2E8467;
+    --green-soft:#E1F0EA;
+    --red:#B0454A;
+    --red-soft:#F6E4E4;
+    --plum:#79567F;
+    --shadow:0 1px 2px rgba(18,35,59,.06), 0 8px 24px rgba(18,35,59,.06);
+    --shadow-lift:0 2px 4px rgba(18,35,59,.08), 0 16px 40px rgba(18,35,59,.10);
+    --font:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,"Cascadia Code","SFMono-Regular",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--font);
+    color:var(--ink);
+    background:var(--canvas);
+    font-variant-numeric:tabular-nums;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.4;
+  }
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- shell ---------- */
+  .app{display:grid;grid-template-columns:230px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+  .topbar{
+    grid-column:1 / -1;display:flex;align-items:center;gap:18px;
+    padding:0 22px;height:60px;background:var(--navy-deep);color:#fff;
+    position:sticky;top:0;z-index:40;
+  }
+  .brand{display:flex;align-items:center;gap:11px;font-weight:600;letter-spacing:.2px}
+  .brand .mark{
+    width:26px;height:26px;border-radius:6px;flex:none;
+    background:linear-gradient(135deg,var(--teal),#0e6577);
+    display:grid;place-items:center;
+  }
+  .brand .mark svg{display:block}
+  .brand small{display:block;font-weight:400;font-size:11px;color:#A9C0D8;letter-spacing:.3px;margin-top:-1px}
+  .topbar .spacer{flex:1}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;
+    border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;
+  }
+  .chip-secure{background:rgba(18,126,147,.22);color:#BFE7ee;border:1px solid rgba(18,126,147,.5)}
+  .chip-demo{background:rgba(192,120,43,.2);color:#F3D3A6;border:1px solid rgba(192,120,43,.45)}
+  .topbar select{
+    appearance:none;background:#1f426e;color:#fff;border:1px solid #325b8a;
+    height:30px;border-radius:7px;padding:0 30px 0 11px;font:inherit;font-size:12.5px;font-weight:600;
+    cursor:pointer;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23bcd' fill='none' stroke-width='1.5' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 11px center;
+  }
+  .topbar .fld{display:flex;flex-direction:column;gap:2px}
+  .topbar .fld label{font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:#8FA9C6}
+
+  /* ---------- nav ---------- */
+  .nav{
+    background:var(--navy);color:#cdd9e8;padding:16px 12px;
+    position:sticky;top:60px;height:calc(100vh - 60px);align-self:start;overflow-y:auto;
+  }
+  .nav .grp{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#7d97b5;padding:6px 12px 8px}
+  .nav button{
+    display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+    background:none;border:0;color:#cdd9e8;font:inherit;font-size:13.5px;
+    padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:2px;transition:background .15s,color .15s}
+  .nav button .ic{width:18px;height:18px;flex:none;opacity:.85}
+  .nav button:hover{background:rgba(255,255,255,.07);color:#fff}
+  .nav button.active{background:var(--teal);color:#fff;font-weight:600;box-shadow:inset 3px 0 0 #073}
+  .nav button.active .ic{opacity:1}
+  .nav .foot{margin-top:18px;padding:12px;border-top:1px solid rgba(255,255,255,.12);font-size:11px;color:#8FA9C6;line-height:1.5}
+
+  /* ---------- canvas ---------- */
+  .canvas{padding:22px 26px 40px;max-width:1240px}
+  .view-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px;flex-wrap:wrap}
+  .view-head h1{font-size:22px;margin:0 0 3px;letter-spacing:-.2px}
+  .view-head p{margin:0;color:var(--muted);font-size:13px;max-width:620px}
+  .view-scope{font-size:12px;color:var(--muted);text-align:right}
+  .view-scope b{color:var(--ink)}
+
+  .grid{display:grid;gap:16px}
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  .cols-2{grid-template-columns:1fr 1fr}
+  .cols-3{grid-template-columns:repeat(3,1fr)}
+  .cols-32{grid-template-columns:1.35fr 1fr}
+  .cols-23{grid-template-columns:1fr 1.35fr}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 2px;font-size:13.5px;font-weight:600}
+  .card .sub{margin:0 0 14px;font-size:11.5px;color:var(--muted)}
+  .card.tall{display:flex;flex-direction:column}
+
+  .kpi{position:relative;overflow:hidden}
+  .kpi .cap{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.2px}
+  .kpi .val{font-size:29px;font-weight:700;letter-spacing:-.5px;margin:6px 0 2px;line-height:1}
+  .kpi .val small{font-size:15px;font-weight:600;color:var(--ink-2);margin-left:2px}
+  .kpi .delta{font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+  .kpi .spark{position:absolute;right:14px;bottom:12px;opacity:.9}
+  .up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--muted)}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px}
+  .tag.good{background:var(--green-soft);color:var(--green)}
+  .tag.warn{background:var(--amber-soft);color:var(--amber)}
+  .tag.bad{background:var(--red-soft);color:var(--red)}
+  .tag.info{background:var(--teal-soft);color:var(--teal)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:11.5px;color:var(--ink-2)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+  svg .bar,svg .pt,svg .seg{transition:opacity .15s}
+  svg .bar:hover,svg .seg:hover{opacity:.82;cursor:default}
+
+  table.data{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.data th{text-align:left;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;border-bottom:1px solid var(--line)}
+  table.data td{padding:9px 8px;border-bottom:1px solid #EEF2F7}
+  table.data td.r,table.data th.r{text-align:right}
+  table.data tr:last-child td{border-bottom:0}
+  .prog{height:8px;border-radius:5px;background:#EbEff5;overflow:hidden;min-width:80px}
+  .prog i{display:block;height:100%;border-radius:5px}
+
+  /* planning panel */
+  .sim{background:linear-gradient(180deg,#F7FAFC,#FFF);border:1px solid var(--line);border-left:3px solid var(--teal)}
+  .sim .simhead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .sim .simhead .badge{background:var(--teal);color:#fff;font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 7px;border-radius:5px;text-transform:uppercase}
+  .presets{display:flex;gap:7px;margin:14px 0 6px;flex-wrap:wrap}
+  .presets button{font:inherit;font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink-2);cursor:pointer;transition:.15s}
+  .presets button:hover{border-color:var(--teal);color:var(--teal)}
+  .presets button.on{background:var(--teal);border-color:var(--teal);color:#fff}
+  .slider-row{margin:14px 0 4px}
+  .slider-row .lab{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;margin-bottom:8px}
+  .slider-row .lab .v{color:var(--teal)}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:4px;
+    background:linear-gradient(90deg,var(--teal) 0 var(--fill,50%),#DCE4EE var(--fill,50%) 100%);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--teal);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--teal);cursor:pointer}
+  .simout{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .simout .box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .simout .box .k{font-size:11px;color:var(--muted);font-weight:600}
+  .simout .box .n{font-size:22px;font-weight:700;margin-top:4px;letter-spacing:-.4px;transition:color .2s}
+  .simout .box .h{font-size:11px;color:var(--muted);margin-top:2px}
+
+  .callout{display:flex;gap:12px;align-items:flex-start;background:var(--teal-soft);border:1px solid #BEE0E5;border-radius:10px;padding:13px 15px;font-size:12.5px;color:#0d5c6b;line-height:1.5}
+  .callout svg{flex:none;margin-top:1px}
+  .callout b{color:#0a4a57}
+
+  .footer{grid-column:1 / -1;padding:16px 26px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--line);background:var(--surface);line-height:1.6}
+
+  polyline,path,rect,circle,line{shape-rendering:geometricPrecision}
+  .axis text{font-size:10.5px;fill:var(--muted);font-family:var(--font)}
+  .axis line{stroke:#EBEFF5}
+  .glabel{font-size:10.5px;fill:var(--ink-2)}
+  @media (max-width:960px){
+    .app{grid-template-columns:1fr}
+    .nav{display:none}
+    .kpis{grid-template-columns:1fr 1fr}
+    .cols-2,.cols-3,.cols-32,.cols-23{grid-template-columns:1fr}
+    .canvas{padding:16px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark"><svg width="15" height="15" viewBox="0 0 15 15"><path d="M1.5 10.5L5 5l2.5 3.5L10 3.5l3.5 7" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <div>ITZBund · Analytics-Cockpit<small>in Anlehnung an SAP Analytics Cloud — Dedicated Tenant</small></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="fld">
+      <label for="behoerde">Mandant / Behörde</label>
+      <select id="behoerde"></select>
+    </div>
+    <div class="fld">
+      <label for="jahr">Haushaltsjahr</label>
+      <select id="jahr"><option>2025</option><option>2024</option><option>2023</option></select>
+    </div>
+    <span class="chip chip-secure" title="Dedizierter Single-Tenant, dedizierte HANA-Instanz, Datenhaltung Bund">
+      <svg width="13" height="13" viewBox="0 0 13 13"><path d="M6.5 1l4 1.6v3.2c0 2.7-1.7 4.6-4 5.6-2.3-1-4-2.9-4-5.6V2.6L6.5 1z" fill="none" stroke="#BFE7ee" stroke-width="1.1"/><path d="M4.6 6.6l1.4 1.4 2.6-2.9" fill="none" stroke="#BFE7ee" stroke-width="1.1" stroke-linecap="round"/></svg>
+      Dedicated
+    </span>
+    <span class="chip chip-demo">Demo · Musterdaten</span>
+  </header>
+
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <div class="grp">Steuerung</div>
+    <div class="grp" style="display:none"></div>
+    <div id="navbtns"></div>
+    <div class="foot">
+      <strong style="color:#cdd9e8">Datenbasis</strong><br>
+      S/4HANA (ERP Bundestemplate), SAP HCM (PVSplus), RZ-Telemetrie. Live-Anbindung in Produktion; hier Musterdaten.
+    </div>
+  </nav>
+
+  <!-- CANVAS -->
+  <main class="canvas" id="canvas"></main>
+
+  <footer class="footer">
+    <strong>Unverbindlicher Prototyp</strong> zu Demonstrationszwecken — alle Werte sind frei erfundene Musterdaten, keine echten ITZBund-Zahlen. „SAP", „SAP Analytics Cloud", „S/4HANA" sind Marken der SAP SE; diese Demo ist keine offizielle SAP-Anwendung. Modul-Umschaltung, Mandantenfilter und Planungs-Simulation sind interaktiv.
+  </footer>
+</div>
+
+<script>
+/* ============================== STATE & DATA ============================== */
+const fmt = (n,d=0)=>n.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const eur = (n,d=0)=>fmt(n,d)+' Mio €';
+
+const behoerden = {
+  konsolidiert:{name:'Alle Kundenbehörden (konsolidiert)', scale:1,    tempo:0, budget:2860},
+  gzd:         {name:'Generalzolldirektion (Zoll)',        scale:.185,  tempo:+.05, budget:530},
+  bamf:        {name:'Bundesamt für Migration & Flüchtlinge', scale:.12, tempo:-.06, budget:344},
+  bva:         {name:'Bundesverwaltungsamt',               scale:.095, tempo:+.02, budget:272},
+  besch:       {name:'Beschaffungsamt des BMI',            scale:.045, tempo:-.02, budget:129},
+  bzst:        {name:'Bundeszentralamt für Steuern',       scale:.07,  tempo:+.03, budget:200},
+};
+
+const state = {
+  view:'uebersicht',
+  behoerde:'konsolidiert',
+  jahr:'2025',
+  simTempo:1.0,       // Mittelabfluss-Tempo Q3/Q4
+  simPreset:'basis',
+};
+const B = ()=>behoerden[state.behoerde];
+
+/* ============================== SVG HELPERS ============================== */
+const svg = (w,h,inner)=>`<svg viewBox="0 0 ${w} ${h}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">${inner}</svg>`;
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+function sparkline(vals,w=76,h=26,color='var(--teal)'){
+  const mn=Math.min(...vals),mx=Math.max(...vals),pad=2;
+  const x=i=>pad+i*(w-2*pad)/(vals.length-1);
+  const y=v=>h-pad-((v-mn)/((mx-mn)||1))*(h-2*pad);
+  const pts=vals.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const area=`${pad},${h-pad} ${pts} ${w-pad},${h-pad}`;
+  return svg(w,h,`<polygon points="${area}" fill="${color}" opacity="0.10"/><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${x(vals.length-1)}" cy="${y(vals[vals.length-1])}" r="2.2" fill="${color}"/>`);
+}
+
+// grouped vertical bars: series=[{name,color,vals}], cats=[labels]
+function groupedBars(cats,series,{w=560,h=250,unit='',money=false}={}){
+  const L=44,R=12,T=14,Bm=34, iw=w-L-R, ih=h-T-Bm;
+  const all=series.flatMap(s=>s.vals); const mx=Math.max(...all)*1.12;
+  const gy=v=>T+ih-(v/mx)*ih;
+  const gw=iw/cats.length, bw=Math.min(30,(gw*0.62)/series.length);
+  let g='';
+  for(let t=0;t<=4;t++){const v=mx*t/4;const yy=gy(v);g+=`<line x1="${L}" x2="${w-R}" y1="${yy}" y2="${yy}"/><text x="${L-7}" y="${yy+3}" text-anchor="end">${money?fmt(v):fmt(v,0)}</text>`;}
+  let bars='';
+  cats.forEach((c,ci)=>{
+    const cx=L+ci*gw;
+    const total=series.length*bw+(series.length-1)*4;
+    const start=cx+(gw-total)/2;
+    series.forEach((s,si)=>{
+      const bx=start+si*(bw+4); const bh=(s.vals[ci]/mx)*ih; const by=T+ih-bh;
+      bars+=`<rect class="bar" x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="2.5" fill="${s.color}"><title>${c} · ${s.name}: ${money?eur(s.vals[ci]):fmt(s.vals[ci])+unit}</title></rect>`;
+    });
+    bars+=`<text class="glabel" x="${(cx+gw/2).toFixed(1)}" y="${h-13}" text-anchor="middle">${c}</text>`;
+  });
+  return svg(w,h,`<g class="axis">${g}</g>${bars}`);
+}
+
+// multi-line chart, series=[{name,color,vals,dash?}], xlabels
+function lineChart(xlabels,series,{w=560,h=250,unit='%',yMax=null,marker=null}={}){
+  const L=42,R=14,T=14,Bm=30, iw=w-L-R, ih=h-T-Bm;
+  const all=series.flatMap(s=>s.vals.filter(v=>v!=null));
+  const mx=yMax!=null?yMax:Math.max(...all)*1.1, mn=0;
+  const gx=i=>L+i*iw/(xlabels.length-1);
+  const gy=v=>T+ih-((v-mn)/((mx-mn)||1))*ih;
+  let grid='';
+  for(let t=0;t<=4;t++){const v=mx*t/4;const yy=gy(v);grid+=`<line x1="${L}" x2="${w-R}" y1="${yy}" y2="${yy}"/><text x="${L-7}" y="${yy+3}" text-anchor="end">${fmt(v)}${unit}</text>`;}
+  let xax='';xlabels.forEach((l,i)=>{if(i%1===0)xax+=`<text class="glabel" x="${gx(i)}" y="${h-11}" text-anchor="middle">${l}</text>`;});
+  let lines='';
+  series.forEach(s=>{
+    const pts=s.vals.map((v,i)=>v==null?null:`${gx(i).toFixed(1)},${gy(v).toFixed(1)}`).filter(Boolean).join(' ');
+    if(s.area){
+      const first=s.vals.findIndex(v=>v!=null);const last=s.vals.length-1;
+      lines+=`<polygon points="${gx(first)},${T+ih} ${pts} ${gx(last)},${T+ih}" fill="${s.color}" opacity="0.08"/>`;
+    }
+    lines+=`<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="${s.width||2.2}" stroke-linecap="round" stroke-linejoin="round" ${s.dash?`stroke-dasharray="5 4"`:''} style="transition:all .35s ease"/>`;
+    s.vals.forEach((v,i)=>{if(v!=null&&(s.dots!==false))lines+=`<circle class="pt" cx="${gx(i).toFixed(1)}" cy="${gy(v).toFixed(1)}" r="${i===s.vals.length-1?3.2:2.2}" fill="${s.color}"><title>${xlabels[i]} · ${s.name}: ${fmt(v)}${unit}</title></circle>`;});
+  });
+  let mk='';
+  if(marker!=null){const xx=gx(marker);mk=`<line x1="${xx}" x2="${xx}" y1="${T}" y2="${T+ih}" stroke="var(--amber)" stroke-width="1" stroke-dasharray="3 3"/><text x="${xx+4}" y="${T+11}" font-size="10" fill="var(--amber)" font-weight="600">Stand heute</text>`;}
+  return svg(w,h,`<g class="axis">${grid}</g>${mk}${lines}${xax}`);
+}
+
+// horizontal progress bars, rows=[{label,val,target,color,unit}]
+function hBars(rows,{w=560}={}){
+  return `<table class="data"><thead><tr><th>Leistung</th><th style="width:38%">Anschlussgrad</th><th class="r">Angebunden</th><th class="r">Ziel</th></tr></thead><tbody>${
+    rows.map(r=>{const p=Math.round(r.val/r.target*100);return `<tr>
+      <td>${r.label}</td>
+      <td><div style="display:flex;align-items:center;gap:9px"><div class="prog" style="flex:1"><i style="width:${p}%;background:${r.color}"></i></div><b style="font-size:12px;min-width:32px">${p}%</b></div></td>
+      <td class="r num">${fmt(r.val)}</td><td class="r num" style="color:var(--muted)">${fmt(r.target)}</td></tr>`;}).join('')
+  }</tbody></table>`;
+}
+
+// donut, segs=[{label,val,color}]
+function donut(segs,{size=150,thick=26,center=''}={}){
+  const r=(size-thick)/2, cx=size/2, cy=size/2, C=2*Math.PI*r;
+  const tot=segs.reduce((a,s)=>a+s.val,0); let off=0; let arcs='';
+  segs.forEach(s=>{const len=s.val/tot*C;arcs+=`<circle class="seg" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="${thick}" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"><title>${s.label}: ${fmt(s.val)}</title></circle>`;off+=len;});
+  const ctr=center?`<text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="21" font-weight="700" fill="var(--ink)">${center.big}</text><text x="${cx}" y="${cy+15}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${center.small}</text>`:'';
+  return svg(size,size,`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#EEF2F7" stroke-width="${thick}"/>${arcs}${ctr}`);
+}
+
+// arc gauge for PUE-like value
+function gauge(val,min,max,{w=200,h=130,good=1.4,bad=1.7,unit=''}={}){
+  const cx=w/2,cy=h-14,r=78,sa=Math.PI,ea=0;
+  const a=t=>sa+(ea-sa)*t;
+  const pt=(ang,rad)=>[cx+Math.cos(ang)*rad,cy-Math.sin(ang)*rad];
+  const arc=(t0,t1,rad,col,wd)=>{const [x0,y0]=pt(a(t0),rad),[x1,y1]=pt(a(t1),rad);const laf=(t1-t0)>0.5?1:0;return `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A ${rad} ${rad} 0 ${laf} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="${col}" stroke-width="${wd}" stroke-linecap="round"/>`;};
+  const tv=(v)=>Math.max(0,Math.min(1,(v-min)/(max-min)));
+  const tg=tv(good),tb=tv(bad),tval=tv(val);
+  let track=arc(0,tg,r,'var(--green)',11)+arc(tg,tb,r,'var(--amber)',11)+arc(tb,1,r,'var(--red)',11);
+  const [nx,ny]=pt(a(tval),r-2);
+  const needle=`<line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="4.5" fill="var(--ink)"/>`;
+  return svg(w,h,`${track}${needle}<text x="${cx}" y="${cy-26}" text-anchor="middle" font-size="24" font-weight="700" fill="var(--ink)">${fmt(val,2)}</text><text x="${cx}" y="${cy-11}" text-anchor="middle" font-size="10" fill="var(--muted)">${unit}</text>`);
+}
+
+/* ============================== VIEWS ============================== */
+const views = {
+
+uebersicht(){
+  const b=B(),s=b.scale;
+  const budget=b.budget;
+  const abfluss=Math.round((67+ (b.tempo*40))*10)/10;
+  const kpis=[
+    {cap:'Haushaltsvolumen '+state.jahr,val:eur(budget),delta:'+4,1 % ggü. Vj.',cls:'up',spark:[2650,2700,2740,2790,2820,budget],col:'var(--navy)'},
+    {cap:'Mittelabfluss (Ist)',val:abfluss+' %',sub:'Soll z. Stichtag 76 %',delta:(abfluss-76).toFixed(1)+' %-Pkt.',cls:abfluss>=76?'up':'down',spark:[8,19,31,45,58,abfluss],col:'var(--teal)'},
+    {cap:'Beschäftigte (VZÄ)',val:fmt(Math.round(4600*s)),delta:'+312 im Jahr',cls:'up',spark:[3980,4120,4300,4460,4560,Math.round(4600*s)],col:'var(--slate)'},
+    {cap:'SLA-Erfüllung',val:'98,7 %',delta:'Ziel 98,0 %',cls:'up',spark:[97.4,98.1,98.3,98.0,98.6,98.7],col:'var(--green)'},
+  ];
+  const kpiHtml=kpis.map(k=>`<div class="card kpi">
+    <div class="cap">${k.cap}</div>
+    <div class="val num">${k.val}</div>
+    <div class="delta ${k.cls}">${k.cls==='up'?'▲':k.cls==='down'?'▼':'▸'} ${k.delta}</div>
+    <div class="spark">${sparkline(k.spark,76,26,k.col)}</div>
+  </div>`).join('');
+
+  const modules=['Verkehr','Zoll','Haushalt','Steuer','Personal','Statistik','Innere Sicherheit','Asyl','Integration'];
+  const consol=[
+    {label:'Bundescloud',val:Math.round(112*s+ (s<1?0:0)),target:200,color:'var(--navy)'},
+    {label:'E-Akte Bund',val:Math.round(78*s),target:200,color:'var(--teal)'},
+    {label:'PVSplus (SAP HCM)',val:Math.round(64*s),target:170,color:'var(--slate)'},
+    {label:'ERP Bundestemplate S/4HANA',val:Math.round(9*s+ (s<1?0:0)),target:120,color:'var(--amber)'},
+  ].map(r=>({...r,val:Math.max(1,r.val)}));
+
+  return `
+  ${scopeHead('Executive Cockpit','Konsolidierte Steuerungssicht über Haushalt, Personal und Betrieb — eine Oberfläche auf S/4HANA- und HCM-Daten.')}
+  <div class="grid kpis" style="margin-bottom:16px">${kpiHtml}</div>
+  <div class="grid cols-32" style="margin-bottom:16px">
+    <div class="card tall">
+      <h3>Mittelabfluss ${state.jahr} — Plan vs. Ist vs. Prognose</h3>
+      <p class="sub">Kumuliert in % des Haushaltsvolumens · Prognose aus der Planungs-Simulation (Modul Haushalt)</p>
+      ${abflussChart()}
+      <div class="legend">
+        <span><i style="background:var(--slate)"></i>Plan</span>
+        <span><i style="background:var(--teal)"></i>Ist</span>
+        <span><i style="background:var(--amber)"></i>Prognose Jahresende</span>
+      </div>
+    </div>
+    <div class="card tall">
+      <h3>Anschlussgrad IT-Konsolidierung</h3>
+      <p class="sub">Angebundene Behörden je zentraler Leistung (von ~200)</p>
+      ${hBars(consol)}
+      <div class="callout" style="margin-top:14px">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="8" fill="none" stroke="#127E93" stroke-width="1.2"/><path d="M9 5v5M9 12.5v.6" stroke="#127E93" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <div><b>Dedicated-Nutzen:</b> Jede Behörde sieht ausschließlich ihre eigenen Kennzahlen — strikte Mandantentrennung im dedizierten Tenant. Oben rechts umschalten.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Servicebezug nach Themenfeld</h3>
+    <p class="sub">Relativer Anteil am betreuten IT-Portfolio (Musterverteilung)</p>
+    ${groupedBars(modules,[{name:'Aufwand',color:'var(--navy)',vals:modules.map((m,i)=>Math.round((90-i*7+ (i%3)*14)*s*10)/10)}],{w:820,h:210,unit:' Pkt.'})}
+  </div>`;
+},
+
+haushalt(){
+  const b=B();
+  return `
+  ${scopeHead('Haushalt & Mittelbewirtschaftung','Planung, Vollzug und Prognose auf dem ERP Bundestemplate (S/4HANA) — inkl. Was-wäre-wenn-Simulation für den Mittelabfluss.')}
+  <div class="grid kpis" style="margin-bottom:16px">
+    ${kpiCard('Plan '+state.jahr,eur(b.budget),'Soll-Ansatz','info')}
+    ${kpiCard('Gebunden',eur(Math.round(b.budget*0.71)),'71 % festgelegt','good')}
+    ${kpiCard('Verausgabt (Ist)',eur(Math.round(b.budget*0.58)),'58 % abgeflossen','info')}
+    ${kpiCard('Verfügbar',eur(Math.round(b.budget*0.29)),'29 % Restmittel','warn')}
+  </div>
+  <div class="grid cols-23" style="margin-bottom:16px">
+    <div class="card sim" id="simCard">${simPanel()}</div>
+    <div class="card tall">
+      <h3>Mittelabfluss-Kurve</h3>
+      <p class="sub">Kumulierter Abfluss in % — die Prognose reagiert live auf die Simulation.</p>
+      <div id="abflussHost">${abflussChart(600,300)}</div>
+      <div class="legend">
+        <span><i style="background:var(--slate)"></i>Plan</span>
+        <span><i style="background:var(--teal)"></i>Ist (bis Aug)</span>
+        <span><i style="background:var(--amber)"></i>Prognose</span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Haushaltsvollzug nach Titelgruppe</h3>
+    <p class="sub">Plan gegen Ist je Ausgabenblock (in Mio €)</p>
+    ${titelChart()}
+    <div class="legend"><span><i style="background:var(--slate)"></i>Plan</span><span><i style="background:var(--teal)"></i>Ist</span></div>
+  </div>`;
+},
+
+personal(){
+  const b=B(),s=b.scale;
+  const vzae=Math.round(4600*s);
+  const alters=[
+    {label:'unter 30',val:Math.round(12*1)}, {label:'30–39',val:24},{label:'40–49',val:23},{label:'50–59',val:27},{label:'60+',val:14}
+  ];
+  const ageColors=['var(--teal)','var(--slate)','var(--navy)','var(--amber)','var(--red)'];
+  return `
+  ${scopeHead('Personal & Stellenbewirtschaftung','HR-Analytics auf SAP HCM (PVSplus) — Bestand, Altersstruktur, Fluktuation und Stellenprognose.')}
+  <div class="grid kpis" style="margin-bottom:16px">
+    ${kpiCard('Beschäftigte (VZÄ)',fmt(vzae),'+7,3 % ggü. Vj.','good')}
+    ${kpiCard('Besetzte Stellen',fmt(Math.round(vzae*0.94)),'Stellenplan '+fmt(Math.round(vzae*1.06)),'info')}
+    ${kpiCard('Vakanzquote',(11.3).toFixed(1)+' %',state.behoerde==='bamf'?'angespannt':'Ziel < 8 %',state.behoerde==='bamf'?'bad':'warn')}
+    ${kpiCard('Ø Fluktuation',(4.1).toFixed(1)+' %','Bund-Vergleich niedrig','good')}
+  </div>
+  <div class="grid cols-2" style="margin-bottom:16px">
+    <div class="card">
+      <h3>Altersstruktur</h3>
+      <p class="sub">Verteilung der Beschäftigten in % — Ruhestandswelle 50+ markiert</p>
+      ${groupedBars(alters.map(a=>a.label),[{name:'Anteil',color:'var(--navy)',vals:alters.map(a=>a.val)}],{w:520,h:230,unit:' %'})}
+      <div class="callout" style="margin-top:12px">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2l7 12H2z" fill="none" stroke="#127E93" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 7v4M9 12.6v.5" stroke="#127E93" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <div><b>41 %</b> der Beschäftigten sind 50+. SAC-Planning rechnet die Nachbesetzungs­bedarfe je Jahr hoch (nächstes Diagramm).</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Personalbestand & Nachbesetzungsprognose</h3>
+      <p class="sub">Bestand (Ist) und prognostizierter Ersatzbedarf durch Ruhestand</p>
+      ${lineChart(['2022','2023','2024','2025','2026','2027','2028'],[
+        {name:'Bestand VZÄ (Ist)',color:'var(--teal)',vals:[3980,4300,4560,vzae,null,null,null],area:true},
+        {name:'Bestand (Prognose)',color:'var(--slate)',vals:[null,null,null,vzae,Math.round(vzae*1.02),Math.round(vzae*1.03),Math.round(vzae*1.03)],dash:true},
+        {name:'Ruhestandsabgänge',color:'var(--amber)',vals:[null,null,null,Math.round(vzae*0.03),Math.round(vzae*0.041),Math.round(vzae*0.048),Math.round(vzae*0.052)]},
+      ],{w:520,h:230,unit:'',yMax:Math.round(vzae*1.15)})}
+      <div class="legend">
+        <span><i style="background:var(--teal)"></i>Ist</span><span><i style="background:var(--slate)"></i>Prognose</span><span><i style="background:var(--amber)"></i>Abgänge Ruhestand</span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Stellenbewirtschaftung nach Laufbahn</h3>
+    <p class="sub">Plan­stellen, besetzt und frei je Laufbahngruppe</p>
+    ${laufbahnTable(s)}
+  </div>`;
+},
+
+konsolidierung(){
+  const b=B(),s=b.scale;
+  const rollout=[
+    {label:'Bundescloud',val:Math.round(112*(s<1?1:1)*(state.behoerde==='konsolidiert'?1:s)),target:200,color:'var(--navy)'},
+    {label:'E-Akte Bund',val:78,target:200,color:'var(--teal)'},
+    {label:'PVSplus (SAP HCM)',val:64,target:170,color:'var(--slate)'},
+    {label:'E-Rechnung / ZRE',val:184,target:200,color:'var(--green)'},
+    {label:'ERP Bundestemplate S/4HANA',val:9,target:120,color:'var(--amber)'},
+    {label:'DNS/Netz-Konsolidierung',val:141,target:200,color:'var(--plum)'},
+  ];
+  return `
+  ${scopeHead('Programmsteuerung IT-Konsolidierung','Portfolio-Cockpit für den Generalunternehmer — Roll-out-Fortschritt, Meilensteine und Programmbudget.')}
+  <div class="grid kpis" style="margin-bottom:16px">
+    ${kpiCard('Angebundene Behörden',fmt(184),'von ~200','good')}
+    ${kpiCard('Programmbudget kumul.','1,74 Mrd €','von 3,0 Mrd € Plan','info')}
+    ${kpiCard('Meilensteine im Plan','83 %','12 kritisch beobachtet','warn')}
+    ${kpiCard('E-Rechnungen / Jahr','2,3 Mio','+18 % ggü. Vj.','up')}
+  </div>
+  <div class="grid cols-23" style="margin-bottom:16px">
+    <div class="card">
+      <h3>Roll-out-Fortschritt je Leistung</h3>
+      <p class="sub">Produktiv angebundene Behörden gegen Zielwert</p>
+      ${hBars(rollout)}
+    </div>
+    <div class="card tall">
+      <h3>Programm-Mittelabfluss vs. Zeitplan</h3>
+      <p class="sub">Kumuliertes Budget in Mrd € — Bundesrechnungshof-relevant</p>
+      ${lineChart(['2019','2020','2021','2022','2023','2024','2025','2026'],[
+        {name:'Plan',color:'var(--slate)',vals:[0.2,0.4,0.7,1.0,1.35,1.75,2.3,3.0]},
+        {name:'Ist',color:'var(--teal)',vals:[0.15,0.32,0.55,0.86,1.24,1.74,null,null],area:true},
+        {name:'Prognose',color:'var(--amber)',vals:[null,null,null,null,null,1.74,2.2,2.85],dash:true},
+      ],{w:520,h:250,unit:' Mrd',yMax:3.2})}
+      <div class="legend"><span><i style="background:var(--slate)"></i>Plan</span><span><i style="background:var(--teal)"></i>Ist</span><span><i style="background:var(--amber)"></i>Prognose</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Kritische Meilensteine — Ampelsicht</h3>
+    <p class="sub">Auszug beobachteter Maßnahmen (Musterdaten)</p>
+    ${meilensteinTable()}
+  </div>`;
+},
+
+greenit(){
+  const b=B();
+  return `
+  ${scopeHead('Green IT & Nachhaltigkeit','Energie-, PUE- und CO₂-Kennzahlen der Rechenzentren — Reporting Richtung klimaneutrale Bundesverwaltung.')}
+  <div class="grid kpis" style="margin-bottom:16px">
+    ${kpiCard('Stromverbrauch','214 GWh','Ziel −6 % p.a.','info')}
+    ${kpiCard('Ø PUE','1,42','Ziel < 1,40','warn')}
+    ${kpiCard('Ökostromanteil','100 %','seit 2022','good')}
+    ${kpiCard('CO₂ (Scope 1+2)','8,9 kt','−23 % ggü. 2021','up')}
+  </div>
+  <div class="grid cols-3" style="margin-bottom:16px">
+    <div class="card" style="text-align:center">
+      <h3 style="text-align:left">PUE — Power Usage Effectiveness</h3>
+      <p class="sub" style="text-align:left">Rechenzentrums­effizienz · grün < 1,40</p>
+      <div style="max-width:230px;margin:10px auto 0">${gauge(1.42,1.1,2.0,{good:1.40,bad:1.70,unit:'PUE (Jahresmittel)'})}</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3 style="text-align:left">Energiemix</h3>
+      <p class="sub" style="text-align:left">Bezogene Energie nach Quelle</p>
+      <div style="display:flex;justify-content:center;margin:6px 0">${donut([
+        {label:'Windkraft',val:52,color:'var(--teal)'},{label:'Wasserkraft',val:26,color:'var(--navy)'},{label:'Photovoltaik',val:14,color:'var(--amber)'},{label:'Sonstige EE',val:8,color:'var(--slate)'}
+      ],{center:{big:'100 %',small:'Ökostrom'}})}</div>
+      <div class="legend" style="justify-content:center"><span><i style="background:var(--teal)"></i>Wind 52%</span><span><i style="background:var(--navy)"></i>Wasser 26%</span><span><i style="background:var(--amber)"></i>PV 14%</span><span><i style="background:var(--slate)"></i>Sonst. 8%</span></div>
+    </div>
+    <div class="card">
+      <h3>Abwärmenutzung</h3>
+      <p class="sub">Rückgewonnene Wärme zur Gebäudeheizung</p>
+      ${donut([{label:'genutzt',val:38,color:'var(--green)'},{label:'ungenutzt',val:62,color:'#E7ECF3'}],{center:{big:'38 %',small:'wiederverwendet'}})}
+      <p style="font-size:12px;color:var(--muted);margin:12px 0 0">Kalt-/Warmgang­einhausung senkt den Kühlbedarf; Ausbauziel <b style="color:var(--ink)">55 %</b> bis 2028.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Stromverbrauch & PUE im Zeitverlauf</h3>
+    <p class="sub">Verbrauch in GWh (Balken-Referenz) und PUE-Entwicklung</p>
+    ${lineChart(['2021','2022','2023','2024','2025'],[
+      {name:'PUE',color:'var(--teal)',vals:[1.62,1.55,1.49,1.45,1.42],area:true},
+    ],{w:820,h:210,unit:'',yMax:1.8})}
+    <div class="legend"><span><i style="background:var(--teal)"></i>PUE (niedriger = besser)</span></div>
+  </div>`;
+},
+};
+
+/* ============================== SUB-RENDER PIECES ============================== */
+function scopeHead(title,desc){
+  const b=B();
+  return `<div class="view-head">
+    <div><h1>${title}</h1><p>${desc}</p></div>
+    <div class="view-scope">Sicht: <b>${b.name}</b><br>Haushaltsjahr <b>${state.jahr}</b> · Quelle: Musterdaten</div>
+  </div>`;
+}
+function kpiCard(cap,val,delta,cls){
+  const icon=cls==='good'||cls==='up'?'▲':cls==='bad'?'▼':cls==='warn'?'▸':'▸';
+  const c=cls==='good'||cls==='up'?'up':cls==='bad'?'down':cls==='warn'?'flat':'flat';
+  return `<div class="card kpi"><div class="cap">${cap}</div><div class="val num">${val}</div><div class="delta ${c}">${icon} ${delta}</div></div>`;
+}
+
+/* --- Haushalt: Mittelabfluss forecast (reacts to state.simTempo) --- */
+const abflussMonths=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+function abflussData(){
+  const b=B();
+  const plan=[6,13,22,32,43,55,66,76,85,92,97,100];
+  const istEnd=7; // bis Aug
+  const istBase=[5,11,19,28,38,49,59,67];
+  const ist=istBase.map(v=>Math.max(0,Math.min(100,v+ b.tempo*30)));
+  const cur=ist[istEnd];
+  // forecast Sep..Dez based on tempo
+  const remainWeights=[0.30,0.30,0.24,0.16]; // sums to 1
+  const potential=33; // remaining if on plan
+  const t=state.simTempo; // 0.6..1.35
+  let acc=cur; const fc=new Array(12).fill(null); fc[istEnd]=cur;
+  for(let m=istEnd+1;m<12;m++){acc+=potential*remainWeights[m-istEnd-1]*t;fc[m]=Math.min(112,acc);}
+  const end=fc[11];
+  const rest=Math.max(0,100-end);
+  return {plan,ist:[...ist,null,null,null,null],fc,end,rest,curMonth:istEnd,budget:b.budget};
+}
+function abflussChart(w=560,h=250){
+  const d=abflussData();
+  return lineChart(abflussMonths,[
+    {name:'Plan',color:'var(--slate)',vals:d.plan,dots:false},
+    {name:'Ist',color:'var(--teal)',vals:d.ist,area:true},
+    {name:'Prognose',color:'var(--amber)',vals:d.fc,dash:true},
+  ],{w,h,unit:'%',yMax:112,marker:d.curMonth});
+}
+function simPanel(){
+  const d=abflussData();
+  const fill=Math.round((state.simTempo-0.6)/(1.35-0.6)*100);
+  const restEur=Math.round(d.rest/100*d.budget);
+  const endCls=d.end>=98?'var(--green)':d.end>=90?'var(--amber)':'var(--red)';
+  const restCls=d.rest<=2?'var(--green)':d.rest<=8?'var(--amber)':'var(--red)';
+  const presets=[['konservativ','Konservativ',0.72],['basis','Basis-Szenario',1.0],['beschleunigt','Beschleunigt',1.28]];
+  return `
+    <div class="simhead"><span class="badge">Planung</span><h3 style="margin:0">Was-wäre-wenn: Mittelabfluss Q3–Q4</h3></div>
+    <p class="sub">SAC-Planning rechnet die Jahresend-Prognose live — kein Export nach Excel.</p>
+    <div class="presets" id="presets">
+      ${presets.map(p=>`<button data-t="${p[2]}" data-key="${p[0]}" class="${state.simPreset===p[0]?'on':''}">${p[1]}</button>`).join('')}
+    </div>
+    <div class="slider-row">
+      <div class="lab"><span>Abfluss-Tempo (Restjahr)</span><span class="v" id="tempoVal">${Math.round(state.simTempo*100)} %</span></div>
+      <input type="range" id="tempo" min="0.6" max="1.35" step="0.01" value="${state.simTempo}" style="--fill:${fill}%">
+    </div>
+    <div class="simout">
+      <div class="box"><div class="k">Prognose Jahresende</div><div class="n" id="endN" style="color:${endCls}">${fmt(d.end,1)} %</div><div class="h">Soll 100 % bis Dezember</div></div>
+      <div class="box"><div class="k">Nicht abgeflossen (Rest)</div><div class="n" id="restN" style="color:${restCls}">${eur(restEur)}</div><div class="h">${fmt(d.rest,1)} % — potenzielle Haushaltsreste / Bugwelle</div></div>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="8" fill="none" stroke="#127E93" stroke-width="1.2"/><path d="M6 9l2 2 4-4.5" stroke="#127E93" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div>Steuerungsimpuls: Wird das Tempo nicht erhöht, verbleiben <b id="restInline">${eur(restEur)}</b> — früh genug erkannt, um Vergaben vorzuziehen.</div>
+    </div>`;
+}
+function updateSim(){
+  const d=abflussData();
+  const restEur=Math.round(d.rest/100*d.budget);
+  const endCls=d.end>=98?'var(--green)':d.end>=90?'var(--amber)':'var(--red)';
+  const restCls=d.rest<=2?'var(--green)':d.rest<=8?'var(--amber)':'var(--red)';
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('tempoVal',Math.round(state.simTempo*100)+' %');
+  const endN=document.getElementById('endN');if(endN){endN.textContent=fmt(d.end,1)+' %';endN.style.color=endCls;}
+  const restN=document.getElementById('restN');if(restN){restN.textContent=eur(restEur);restN.style.color=restCls;}
+  set('restInline',eur(restEur));
+  const host=document.getElementById('abflussHost');if(host)host.innerHTML=abflussChart(600,300);
+  const t=document.getElementById('tempo');if(t)t.style.setProperty('--fill',Math.round((state.simTempo-0.6)/(1.35-0.6)*100)+'%');
+}
+
+/* --- Haushalt: Titelgruppen bars --- */
+function titelChart(){
+  const b=B(),s=b.scale;
+  const cats=['Personal','IT-Betrieb','Investitionen','Beschaffung','Sonstiges'];
+  const plan=[1180,760,420,340,160].map(v=>Math.round(v*s));
+  const ist =[690,455,214,190,86].map(v=>Math.round(v*s));
+  return groupedBars(cats,[
+    {name:'Plan',color:'var(--slate)',vals:plan},
+    {name:'Ist',color:'var(--teal)',vals:ist},
+  ],{w:820,h:230,money:true});
+}
+
+/* --- Personal tables --- */
+function laufbahnTable(s){
+  const rows=[
+    ['Höherer Dienst',1180,1094,86],
+    ['Gehobener Dienst',2260,2130,130],
+    ['Mittlerer Dienst',940,872,68],
+    ['Tarifbeschäftigte',1420,1301,119],
+  ];
+  return `<table class="data"><thead><tr><th>Laufbahngruppe</th><th class="r">Planstellen</th><th class="r">Besetzt</th><th class="r">Frei</th><th class="r">Besetzungsgrad</th></tr></thead><tbody>${
+    rows.map(r=>{const pl=Math.round(r[1]*s),be=Math.round(r[2]*s),fr=Math.round(r[3]*s),p=Math.round(be/pl*100);
+    return `<tr><td>${r[0]}</td><td class="r num">${fmt(pl)}</td><td class="r num">${fmt(be)}</td><td class="r num">${fmt(fr)}</td>
+    <td class="r"><span class="tag ${p>=93?'good':p>=88?'warn':'bad'}">${p} %</span></td></tr>`;}).join('')
+  }</tbody></table>`;
+}
+
+/* --- Konsolidierung milestone table --- */
+function meilensteinTable(){
+  const rows=[
+    ['ERP Bundestemplate — Welle 2 (10 Behörden)','Q4 2025','on','Im Plan'],
+    ['Bundescloud — Kapazitätsausbau RZ Süd','Q1 2026','on','Im Plan'],
+    ['PVSplus Fiori-Rollout Restbehörden','Q2 2026','risk','Beobachtet'],
+    ['E-Akte Bund — Anbindung Sicherheitsbereich','Q3 2026','risk','Beobachtet'],
+    ['S/4HANA-Migrationspfad Altverfahren','Q4 2026','crit','Kritisch'],
+  ];
+  const map={on:['good','▲'],risk:['warn','▸'],crit:['bad','▼']};
+  return `<table class="data"><thead><tr><th>Maßnahme</th><th>Ziel-Termin</th><th>Status</th></tr></thead><tbody>${
+    rows.map(r=>`<tr><td>${r[0]}</td><td class="num" style="color:var(--muted)">${r[1]}</td><td><span class="tag ${map[r[2]][0]}">${map[r[2]][1]} ${r[3]}</span></td></tr>`).join('')
+  }</tbody></table>`;
+}
+
+/* ============================== NAV & WIRING ============================== */
+const menu=[
+  ['uebersicht','Übersicht','M2 3h11v7H2zM2 12h5v3H2zM8 12h6v3H8z'],
+  ['haushalt','Haushalt','M2 13l3-4 3 3 3-6 4 7'],
+  ['personal','Personal','M8 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM3 14c0-2.5 2.2-4 5-4s5 1.5 5 4'],
+  ['konsolidierung','IT-Konsolidierung','M4 4h8v3H4zM4 9h8v3H4zM6.5 7v2'],
+  ['greenit','Green IT','M8 14C4 12 3 8 4 3c4 1 8 2 8 7 0 2.2-1.8 4-4 4z'],
+];
+function renderNav(){
+  document.getElementById('navbtns').innerHTML=menu.map(m=>`
+    <button data-v="${m[0]}" class="${state.view===m[0]?'active':''}">
+      <svg class="ic" viewBox="0 0 16 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="${m[2]}"/></svg>${m[1]}
+    </button>`).join('');
+  document.querySelectorAll('#navbtns button').forEach(btn=>btn.onclick=()=>{state.view=btn.dataset.v;render();});
+}
+function initFilters(){
+  const sel=document.getElementById('behoerde');
+  sel.innerHTML=Object.entries(behoerden).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+  sel.value=state.behoerde;
+  sel.onchange=()=>{state.behoerde=sel.value;render();};
+  document.getElementById('jahr').onchange=e=>{state.jahr=e.target.value;render();};
+}
+function wireSim(){
+  const t=document.getElementById('tempo');
+  if(t){t.oninput=()=>{state.simTempo=parseFloat(t.value);state.simPreset='';document.querySelectorAll('#presets button').forEach(b=>b.classList.remove('on'));updateSim();};}
+  document.querySelectorAll('#presets button').forEach(b=>b.onclick=()=>{
+    state.simTempo=parseFloat(b.dataset.t);state.simPreset=b.dataset.key;
+    document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    const t=document.getElementById('tempo');if(t)t.value=state.simTempo;updateSim();
+  });
+}
+function render(){
+  renderNav();
+  document.getElementById('canvas').innerHTML=views[state.view]();
+  if(state.view==='haushalt')wireSim();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+initFilters();
+render();
+</script>
+</body>
+</html>
